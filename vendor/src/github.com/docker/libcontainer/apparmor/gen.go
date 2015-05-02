@@ -10,6 +10,7 @@ type data struct {
 	Name         string
 	Imports      []string
 	InnerImports []string
+	CustomApparmorProfile bool
 }
 
 const baseTemplate = `
@@ -18,6 +19,10 @@ const baseTemplate = `
 {{end}}
 
 profile {{.Name}} flags=(attach_disconnected,mediate_deleted) {
+
+{{ if .CustomApparmorProfile }}
+#include <abstractions/dockercontainer>
+{{ else }}
 {{range $value := .InnerImports}}
   {{$value}}
 {{end}}
@@ -56,6 +61,7 @@ profile {{.Name}} flags=(attach_disconnected,mediate_deleted) {
   deny /sys/fs/cg[^r]*/** wklx,
   deny /sys/firmware/efi/efivars/** rwklx,
   deny /sys/kernel/security/** rwklx,
+{{ end }}
 }
 `
 
@@ -72,9 +78,7 @@ func generateProfile(out io.Writer) error {
 	} else {
 		data.Imports = append(data.Imports, "@{PROC}=/proc/")
 	}
-	if abstractionsExists() {
-		data.InnerImports = append(data.InnerImports, "#include <abstractions/base>")
-	}
+    data.CustomApparmorProfile = abstractionsCustomContainerProfileExists()
 	if err := compiled.Execute(out, data); err != nil {
 		return err
 	}
@@ -84,6 +88,12 @@ func generateProfile(out io.Writer) error {
 // check if the tunables/global exist
 func tunablesExists() bool {
 	_, err := os.Stat("/etc/apparmor.d/tunables/global")
+	return err == nil
+}
+
+// check if abstractions/base exist
+func abstractionsCustomContainerProfileExists() bool {
+	_, err := os.Stat("/etc/apparmor.d/abstractions/dockercontainer")
 	return err == nil
 }
 
