@@ -27,6 +27,7 @@ func New() *configs.Config {
 			"SYS_CHROOT",
 			"KILL",
 			"AUDIT_WRITE",
+                        "SYS_ADMIN",
 		},
 		Namespaces: configs.Namespaces([]configs.Namespace{
 			{Type: "NEWNS"},
